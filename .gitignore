@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Environment
+.env
+
+# Project Specific
+vector_store/
+session.json
+rag_api.log
+data/*
+!data/.gitkeep
+
+# IDEs
+.vscode/
+.idea/
