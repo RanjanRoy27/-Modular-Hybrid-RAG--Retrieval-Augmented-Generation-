@@ -1,8 +1,11 @@
 import os
 import sys
-import pickle
-from langchain_community.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+import hashlib
+from datetime import datetime
+from langchain_community.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader, UnstructuredExcelLoader
+from langchain_experimental.text_splitter import SemanticChunker
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client.http.models import Distance, VectorParams
 import core
 
 # Force UTF-8 for terminal output
@@ -13,11 +16,11 @@ DATA_DIR = "data"
 
 def load_documents():
     """
-    Scans the data/ directory and loads all .txt, .pdf, and .docx files.
+    Scans the data/ directory and loads all .txt, .pdf, .docx, and .xlsx files.
     Returns a list of LangChain Document objects.
     """
     all_docs = []
-    counts = {"txt": 0, "pdf": 0, "docx": 0, "skipped": 0}
+    counts = {"txt": 0, "pdf": 0, "docx": 0, "xlsx": 0, "skipped": 0}
 
     if not os.path.exists(DATA_DIR):
         print(f"Error: '{DATA_DIR}/' directory not found.")
@@ -47,6 +50,10 @@ def load_documents():
                 loader = Docx2txtLoader(filepath)
                 docs = loader.load()
                 counts["docx"] += 1
+            elif ext in ["xlsx", "xls"]:
+                loader = UnstructuredExcelLoader(filepath, mode="elements")
+                docs = loader.load()
+                counts["xlsx"] += 1
             else:
                 print(f"  [Skip] '{filename}' — unsupported format.")
                 counts["skipped"] += 1
@@ -62,7 +69,7 @@ def load_documents():
             print(f"  [Fail] '{filename}' — {e}")
             counts["skipped"] += 1
 
-    print(f"\nLoaded: {counts['txt']} TXT | {counts['pdf']} PDF | {counts['docx']} DOCX | {counts['skipped']} skipped")
+    print(f"\nLoaded: {counts['txt']} TXT | {counts['pdf']} PDF | {counts['docx']} DOCX | {counts['xlsx']} XLSX | {counts['skipped']} skipped")
     return all_docs
 
 
@@ -71,9 +78,8 @@ def ingest_docs():
     Full ingestion pipeline:
     1. Validate environment.
     2. Load all supported documents from data/.
-    3. Split into chunks.
-    4. Embed and store in FAISS.
-    5. Save raw text chunks for BM25 hybrid search.
+    3. Split into semantic chunks.
+    4. Embed and store in Qdrant.
     """
     if not core.validate_env():
         return {"success": False, "files_loaded": 0, "chunks_created": 0, "error": "Environment validation failed."}
@@ -90,25 +96,45 @@ def ingest_docs():
 
         # 2. Split
         print("\nSplitting text into chunks...")
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
+        embeddings = core.get_embeddings()
+        text_splitter = SemanticChunker(embeddings)
         texts = text_splitter.split_documents(documents)
+        
+        # Enrich metadata
+        ingestion_timestamp = datetime.now().isoformat()
+        for i, chunk in enumerate(texts):
+            chunk.metadata["source_file"] = chunk.metadata.get("source", "unknown")
+            chunk.metadata["page_number"] = chunk.metadata.get("page", 0)
+            chunk.metadata["chunk_index"] = i
+            chunk.metadata["ingestion_timestamp"] = ingestion_timestamp
+            
+            # Simple heuristic for section heading (first line)
+            first_line = chunk.page_content.strip().split('\n')[0][:50]
+            chunk.metadata["section_heading"] = first_line if first_line else "Unknown"
+            
+            chunk_hash = hashlib.sha256(chunk.page_content.encode("utf-8")).hexdigest()
+            chunk.metadata["content_hash"] = chunk_hash
+
         print(f"  -> {len(texts)} chunks total.")
         results["chunks_created"] = len(texts)
 
-        # 3. Embed & Store (FAISS)
-        print("\nGenerating embeddings and saving vector store...")
-        embeddings = core.get_embeddings()
-
-        from langchain_community.vectorstores import FAISS
-        vector_store = FAISS.from_documents(texts, embeddings)
-        vector_store.save_local("vector_store")
-        print("  -> FAISS vector store saved to 'vector_store/'.")
-
-        # 4. Save raw chunks for BM25 (hybrid search)
-        chunks_path = os.path.join("vector_store", "chunks.pkl")
-        with open(chunks_path, "wb") as f:
-            pickle.dump(texts, f)
-        print(f"  -> Text chunks saved to '{chunks_path}' (for hybrid search).")
+        # 3. Embed & Store (Qdrant)
+        print("\nGenerating embeddings and saving to Qdrant vector store...")
+        client = core.get_qdrant_client()
+        
+        if not client.collection_exists("documents"):
+            client.create_collection(
+                collection_name="documents",
+                vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+            )
+            
+        vector_store = QdrantVectorStore(
+            client=client,
+            collection_name="documents",
+            embedding=embeddings,
+        )
+        vector_store.add_documents(texts)
+        print("  -> Qdrant vector store updated.")
 
         print("\nDone! Ingestion complete.")
         results["success"] = True

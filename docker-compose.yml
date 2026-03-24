@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  rag-api:
+    build: .
+    container_name: rag-mvp
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Persist data and vector store outside the container
+      - ./data:/app/data
+      - ./vector_store:/app/vector_store
+      - ./rag_api.log:/app/rag_api.log
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

@@ -1,0 +1,18 @@
+[
+  {
+    "role": "human",
+    "content": "What is the Storage Layer in the RAG system?"
+  },
+  {
+    "role": "ai",
+    "content": "Based on the provided context, the **Storage Layer** is one of the independent layers in the RAG system's layered architecture. Its specific responsibilities and characteristics include:\n\n*   **Technology:** It uses **FAISS** to store embeddings.\n*   **Persistence:** It saves data **locally**.\n*   **Functionality:** It enables **similarity search** with a configuration of **top-k = 3**."
+  },
+  {
+    "role": "human",
+    "content": "What technology does it use?"
+  },
+  {
+    "role": "ai",
+    "content": "The Storage Layer uses **FAISS** (Facebook AI Similarity Search) to store embeddings locally."
+  }
+]

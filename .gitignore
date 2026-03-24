@@ -1,20 +1,35 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.venv/
-
-# Environment
+# Environments
 .env
 
-# Project Specific
-vector_store/
-session.json
-rag_api.log
-data/*
-!data/.gitkeep
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-# IDEs
-.vscode/
-.idea/
+# Dependencies
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Databases / Vector Stores
+vector_store/
+qdrant_store/
+
+# Data Files (Do not commit client docs)
+data/
+*.pdf
+*.docx
+*.xlsx
+*.csv
+*.txt
+
+# Logs
+*.log
+rag_trace.log
+
+# App state
+sessions.json
+eval/__pycache__/

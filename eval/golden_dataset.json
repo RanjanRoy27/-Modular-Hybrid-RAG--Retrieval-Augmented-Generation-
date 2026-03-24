@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What is the primary architecture of the open Hybrid RAG MVP?",
+    "ground_truth": "The primary architecture uses FastAPI, Google Gemini Flash 1.5, and a hybrid retrieval approach with FAISS (in-memory) and BM25 via LangChain."
+  },
+  {
+    "question": "How does the ingestion pipeline work in V1 according to the docs?",
+    "ground_truth": "In V1, the ingestion pipeline loads files from the data/ directory, detects the format, extracts text, chunks it using a fixed-size splitter, generates embeddings, builds a FAISS index, and builds a BM25 keyword index."
+  },
+  {
+    "question": "What improvements are planned for Priority 1 in the V2 RAG Upgrade Plan?",
+    "ground_truth": "Priority 1 improvements include implementing Semantic Chunking with metadata and adding a Cross-Encoder Reranker to filter chunks before they go to the LLM."
+  },
+  {
+    "question": "What are the 4 RAGAS metrics that need to be implemented according to the spec?",
+    "ground_truth": "The metrics are faithfulness, answer_relevancy, context_precision, and context_recall."
+  },
+  {
+    "question": "Why is it important to replace RecursiveCharacterTextSplitter?",
+    "ground_truth": "It causes context fragmentation and is heading-blind. Semantic chunking prevents splitting across section boundaries."
+  }
+]

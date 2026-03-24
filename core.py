@@ -3,9 +3,9 @@ import sys
 import pickle
 import json
 from dotenv import load_dotenv
-from langchain_community.vectorstores import FAISS
-from langchain_community.retrievers import BM25Retriever
-from langchain_classic.retrievers import EnsembleRetriever
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
@@ -27,32 +27,30 @@ def get_embeddings():
 def get_llm():
     return ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
 
+q_client = None
+def get_qdrant_client():
+    global q_client
+    if q_client is None:
+        q_client = QdrantClient(path="qdrant_store")
+    return q_client
+
 def load_retriever(embeddings):
-    """Loads the hybrid retriever (FAISS + BM25) or falls back to FAISS."""
-    if not os.path.exists("vector_store"):
-        return None, "Vector store not found. Run 'python ingest.py' first."
-
+    """Loads the Qdrant retriever."""
     try:
-        # Load FAISS vector retriever (semantic search)
-        vector_store = FAISS.load_local("vector_store", embeddings, allow_dangerous_deserialization=True)
-        faiss_retriever = vector_store.as_retriever(search_kwargs={"k": 3})
-
-        # Load BM25 retriever (keyword search) from saved chunks
-        chunks_path = os.path.join("vector_store", "chunks.pkl")
-        if os.path.exists(chunks_path):
-            with open(chunks_path, "rb") as f:
-                chunks = pickle.load(f)
-            bm25_retriever = BM25Retriever.from_documents(chunks)
-            bm25_retriever.k = 3
-
-            # Hybrid: 50% BM25 (keyword) + 50% FAISS (semantic)
-            retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever, faiss_retriever],
-                weights=[0.5, 0.5]
+        client = get_qdrant_client()
+        if not client.collection_exists("documents"):
+            client.create_collection(
+                collection_name="documents",
+                vectors_config=VectorParams(size=768, distance=Distance.COSINE),
             )
-            return retriever, "Using HYBRID search (BM25 + FAISS)."
-        else:
-            return faiss_retriever, "Using SEMANTIC search only (run ingest.py to enable hybrid)."
+            
+        vector_store = QdrantVectorStore(
+            client=client,
+            collection_name="documents",
+            embedding=embeddings,
+        )
+        retriever = vector_store.as_retriever(search_kwargs={"k": 20})
+        return retriever, "Using QDRANT search."
 
     except Exception as e:
         return None, f"Error loading vector store: {e}"
