@@ -1,0 +1,23 @@
+{
+  "_note": "Populate from real documents before running evaluator. Target: 20+ for production baseline. Each entry must map to an actual document in your data/ folder.",
+  "dataset": [
+    {
+      "question": "",
+      "ground_truth_answer": "",
+      "relevant_source": "",
+      "page": 0
+    },
+    {
+      "question": "",
+      "ground_truth_answer": "",
+      "relevant_source": "",
+      "page": 0
+    },
+    {
+      "question": "",
+      "ground_truth_answer": "",
+      "relevant_source": "",
+      "page": 0
+    }
+  ]
+}
