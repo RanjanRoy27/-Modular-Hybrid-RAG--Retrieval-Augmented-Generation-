@@ -1,121 +1,134 @@
-# 🧠 Hybrid RAG MVP (FastAPI + Google Gemini)
+# Modular Hybrid RAG
 
-A production-ready **Retrieval-Augmented Generation (RAG)** system built with Python, FastAPI, and the Google Gemini ecosystem. This project allows you to have natural, persistent conversations with your own documents (PDF, DOCX, TXT) using a state-of-the-art hybrid search engine.
+A FastAPI-based Retrieval-Augmented Generation system for chatting with private documents using Google Gemini, Qdrant, hybrid retrieval, reranking, and a lightweight browser UI.
 
----
+## Features
 
-## 🔥 Key Features
+- Document ingestion for PDF, DOCX, TXT, and spreadsheet sources.
+- Qdrant-backed semantic retrieval with optional BM25 keyword retrieval modules.
+- Cross-encoder reranking before answer generation.
+- FastAPI API with an included static chat UI.
+- Optional Bearer-token protection through `RAG_API_KEY`.
+- Persistent chat sessions and uploaded document management.
+- Docker and Docker Compose support for local or cloud deployment.
 
-- **Hybrid Search Engine**: Combines **BM25 (Keyword)** and **FAISS (Semantic)** searching using LangChain's `EnsembleRetriever` for superior accuracy.
-- **Multi-Format Ingestion**: Automatically detects and processes `.pdf`, `.docx`, and `.txt` files.
-- **Persistent Conversational Memory**: Remembers chat history across restarts using a JSON-based session storage.
-- **FastAPI Backend**: Production-ready API for easy integration with web or mobile frontends.
-- **Contextual Rephrasing**: Follow-up questions are automatically rephrased into standalone search queries for better retrieval.
-- **Performance Logging**: Detailed tracking of query latency, context length, and model usage.
+## Tech Stack
 
----
+- Python, FastAPI, Uvicorn
+- LangChain and Google Gemini
+- Qdrant local vector store
+- Sentence Transformers reranker
+- Static HTML/CSS/JavaScript frontend
+- Docker Compose
 
-## 🛠️ Tech Stack
+## Repository Layout
 
-- **Framework**: FastAPI
-- **LLM / Embeddings**: Google Gemini (Flash 1.5, Embedding-001)
-- **Orchestration**: LangChain
-- **Vector Store**: FAISS
-- **Search Logic**: BM25 & Semantic Ensemble
-- **Document Loading**: PyPDF, Docx2txt
+```text
+.
+├── api.py                  # FastAPI app and HTTP routes
+├── agent.py                # Tool-calling RAG agent
+├── core.py                 # Runtime model/vector-store helpers
+├── ingest.py               # Current ingestion entry point
+├── main.py                 # CLI chat entry point
+├── modules/                # Modular V3 components by responsibility
+├── static/                 # Browser UI
+├── eval/                   # Evaluation scripts and datasets
+├── tests/                  # Manual/API smoke tests
+├── scripts/                # Utility scripts
+├── docs/                   # Project, deployment, and workflow docs
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+└── .env.example
+```
 
----
+## Quick Start
 
-## 🚀 Getting Started
+1. Create and activate a virtual environment.
 
-### 1. Prerequisites
-- Python 3.9+
-- A Google Gemini API Key ([Get it here](https://aistudio.google.com/))
-
-### 2. Installation
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/rag-mvp.git
-cd rag-mvp
+python -m venv .venv
+.venv\Scripts\activate
+```
 
-# Install dependencies
+2. Install dependencies.
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configuration
-Create a `.env` file in the root directory. The easiest path is to copy `.env.example`:
+3. Configure environment variables.
+
 ```bash
-cp .env.example .env
+copy .env.example .env
 ```
 
-Then edit `.env`:
-```env
-GOOGLE_API_KEY=your_api_key_here
+Edit `.env` and set:
 
-# Optional locally, recommended for deployment.
+```env
+GOOGLE_API_KEY=your_google_gemini_api_key
 RAG_API_KEY=your_private_app_api_key
 ```
 
-When `RAG_API_KEY` is set, API clients must send:
+`RAG_API_KEY` is optional for local development. When set, API clients must send:
+
 ```http
 Authorization: Bearer your_private_app_api_key
 ```
 
-The browser UI will prompt for the key on the first protected request and store it in local browser storage.
+4. Add documents to `data/`, then ingest them.
 
-### 4. Usage
-
-#### Step A: Ingest Documents
-Place your files in the `data/` folder and run:
 ```bash
 python ingest.py
 ```
 
-#### Step B: Start the API
+5. Start the API and UI.
+
 ```bash
 python api.py
 ```
-The API will be available at `http://localhost:8000`. You can view the Interactive Documentation at `http://localhost:8000/docs`.
 
-To test protected endpoints from a terminal:
+Open `http://localhost:8000`.
+
+## Docker
+
+```bash
+docker compose up --build
+```
+
+The Compose setup mounts:
+
+- `./data` for source documents.
+- `./qdrant_store` for vector storage.
+
+## Testing
+
+Run the API smoke test after the server is running:
+
 ```bash
 $env:RAG_API_KEY="your_private_app_api_key"
-python test_api.py
+python tests/test_api.py
 ```
 
----
+Run a syntax-only check:
 
-## 📡 API Endpoints
-
-### `POST /rag/ingest`
-Triggers the ingestion pipeline to refresh the vector store from the `data/` directory.
-
-### `POST /rag/answer`
-Answers a question based on uploaded documents. Supports chat history.
-**Payload:**
-```json
-{
-  "question": "What is the third layer?",
-  "history": [
-    {"role": "human", "content": "Tell me about the architecture."},
-    {"role": "ai", "content": "..."}
-  ]
-}
+```bash
+python -m py_compile api.py core.py ingest.py main.py agent.py monitor.py reranker.py pipeline.py tests/test_api.py tests/test_llm.py
 ```
 
----
+## Project Workflow
 
-## 📂 Project Structure
-```text
-├── api.py           # FastAPI service wrapper
-├── ingest.py        # Document ingestion & indexing logic
-├── main.py          # CLI-based chatbot version
-├── test_api.py      # E2E API verification script
-├── requirements.txt # Project dependencies
-└── data/            # Your source documents (.pdf, .docx, .txt)
-```
+- Use small feature branches for new work.
+- Keep `main` deployable.
+- Prefer linear history with rebase or squash merges.
+- Version releases with tags like `v0.1.0`, `v0.2.0`, and so on.
 
----
+See [docs/git_workflow.md](docs/git_workflow.md) for the exact commit, branch, and release process.
 
-## 📝 License
-This project is licensed under the MIT License.
+## Documentation
+
+- [Deployment guide](docs/deployment_guide.md)
+- [Git workflow](docs/git_workflow.md)
+- [Architecture notes](docs/architecture.md)
+- [Changelog](CHANGELOG.md)
+

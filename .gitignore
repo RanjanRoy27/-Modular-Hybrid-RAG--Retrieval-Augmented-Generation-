@@ -18,13 +18,13 @@ pip-delete-this-directory.txt
 vector_store/
 qdrant_store/
 
-# Data Files (Do not commit client docs)
+# Data files (do not commit client documents)
 data/
 *.pdf
 *.docx
 *.xlsx
 *.csv
-*.txt
+data/**/*.txt
 
 # Logs
 *.log

@@ -1,109 +1,78 @@
-# RAG MVP — Deployment Guide
+# Deployment Guide
 
-This guide covers how to run your RAG application locally, share it as an MVP demo, and deploy it to a cloud provider.
+This guide covers local development, demo sharing, Docker, and cloud deployment.
 
----
-
-## 1. Running Locally (Development)
+## Local Development
 
 ```bash
-# Make sure your .env file has your key:
-# GOOGLE_API_KEY=your_key_here
-
-cd rag-mvp
-
-# Install dependencies
+copy .env.example .env
 pip install -r requirements.txt
-
-# Ingest your documents first
 python ingest.py
-
-# Start the server
 python api.py
 ```
 
-Then open **[http://localhost:8000](http://localhost:8000)** in your browser to see the chat UI.
+Open `http://localhost:8000`.
 
----
+Required environment variable:
 
-## 2. Sharing as an MVP Demo (Quickest Path)
+```env
+GOOGLE_API_KEY=your_google_gemini_api_key
+```
 
-### Option A — Ngrok (Zero Deployment, Share a Public URL in 2 Minutes)
+Recommended for deployed environments:
 
-1. Download ngrok from [https://ngrok.com/download](https://ngrok.com/download)  
-2. Start your server: `python api.py`  
-3. In a new terminal: `ngrok http 8000`  
-4. Ngrok gives you a public URL like `https://abc123.ngrok.io` — share this with anyone!
+```env
+RAG_API_KEY=your_private_app_api_key
+```
 
-### Option B — Railway (Free Tier, Permanent URL)
+## Quick Demo Sharing
 
-1. Push your code to a GitHub repo.
-2. Sign up at [https://railway.app](https://railway.app).
-3. Click **New Project → Deploy from GitHub Repo**.
-4. Add your environment variable: `GOOGLE_API_KEY` in the Railway dashboard.
-5. Railway auto-detects the `Dockerfile` and deploys. Your app gets a free `*.railway.app` URL.
+### Ngrok
 
----
+1. Start the app with `python api.py`.
+2. In another terminal, run `ngrok http 8000`.
+3. Share the HTTPS URL that ngrok provides.
 
-## 3. Docker Deployment
+### Railway
 
-### Build and Run Locally
+1. Push this repo to GitHub.
+2. Create a Railway project from the GitHub repository.
+3. Add `GOOGLE_API_KEY` and `RAG_API_KEY` in Railway environment variables.
+4. Deploy with the included `Dockerfile`.
+
+## Docker
 
 ```bash
-# Add your API key to .env first
-
-# Build the image
-docker build -t rag-mvp .
-
-# Run with docker-compose (recommended — mounts data/ and vector_store/)
-docker-compose up -d
-
-# Check it's running
-curl http://localhost:8000/health
+docker compose up --build
 ```
 
-### Deploy to a Cloud VM (GCP, AWS, DigitalOcean)
+The container serves the API on `http://localhost:8000`.
 
-1. **Create a VM** (e.g. GCP `e2-small`, AWS `t3.micro`, DigitalOcean Droplet — all have free tiers or ~$6/mo).
-2. **SSH into the VM** and install Docker:
-   ```bash
-   apt-get update && apt-get install -y docker.io docker-compose
-   ```
-3. **Clone or copy your project** to the VM.
-4. **Create the `.env` file** with your `GOOGLE_API_KEY`.
-5. **Run:**
-   ```bash
-   docker-compose up -d
-   ```
-6. Open the VM's public IP on port `8000` in your browser.
+Persistent local mounts:
 
-**Optional:** Point a domain (e.g. from Namecheap) to the VM's IP and add an nginx reverse proxy + SSL with Certbot (free HTTPS).
+- `./data:/app/data`
+- `./qdrant_store:/app/qdrant_store`
 
----
+## Cloud VM
 
-## 4. Recommended MVP Architecture
+1. Create a VM.
+2. Install Docker and Docker Compose.
+3. Clone this repository.
+4. Create `.env`.
+5. Run:
 
-```
-Customer Browser
-      │
-      ▼
-[your-domain.com:443]  ← nginx (SSL/TLS termination)
-      │
-      ▼
-[localhost:8000]  ← FastAPI + RAG (Docker container)
-      │
-      ├── FAISS Vector Store (local file)
-      ├── BM25 Index (local file)
-      └── Gemini API (Google Cloud)
+```bash
+docker compose up -d --build
 ```
 
----
+For production, put the app behind a reverse proxy such as nginx or Caddy and terminate HTTPS at the proxy.
 
-## 5. Pre-Demo Checklist
+## Pre-Demo Checklist
 
-- [ ] `.env` file has a valid `GOOGLE_API_KEY`
-- [ ] Documents placed in `data/` folder
-- [ ] `python ingest.py` (or `/rag/ingest` API call) completed successfully
-- [ ] `GET /health` returns `{"initialized": true}`
-- [ ] Test a few questions in the UI before showing customers
-- [ ] If sharing via ngrok, start ngrok *after* your server is running
+- `.env` has a valid `GOOGLE_API_KEY`.
+- `RAG_API_KEY` is set if the app is public.
+- Documents are placed in `data/`.
+- Ingestion has completed successfully.
+- `GET /health` returns `{"status": "ok", "initialized": true}`.
+- The UI can upload, ingest, create sessions, and answer a test question.
+
