@@ -19,8 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source
 COPY . .
 
-# Create data directory if it doesn't exist
-RUN mkdir -p data vector_store
+# Create persistent directories if they don't exist
+RUN mkdir -p data qdrant_store
 
 # Expose the API port
 EXPOSE 8000

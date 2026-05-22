@@ -1,6 +1,31 @@
 /* === RAG Assistant v2 — Frontend with Sessions & File Management === */
 
 const API_BASE = window.location.origin;
+const API_KEY_STORAGE = 'rag_api_key';
+let ragApiKey = localStorage.getItem(API_KEY_STORAGE) || '';
+
+function authHeaders(headers = {}) {
+    return ragApiKey
+        ? { ...headers, Authorization: `Bearer ${ragApiKey}` }
+        : headers;
+}
+
+function promptForApiKey() {
+    const key = window.prompt('Enter your RAG API key');
+    if (!key) return false;
+    ragApiKey = key.trim();
+    localStorage.setItem(API_KEY_STORAGE, ragApiKey);
+    return true;
+}
+
+async function apiFetch(url, options = {}, retryAuth = true) {
+    const headers = authHeaders(options.headers || {});
+    const res = await fetch(url, { ...options, headers });
+    if ((res.status === 401 || res.status === 403) && retryAuth && promptForApiKey()) {
+        return apiFetch(url, options, false);
+    }
+    return res;
+}
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 const messagesList = document.getElementById('messages-list');
@@ -85,7 +110,7 @@ async function checkStatus() {
 // ── File List ────────────────────────────────────────────────────────────────
 async function loadFiles() {
     try {
-        const res = await fetch(`${API_BASE}/rag/files`);
+        const res = await apiFetch(`${API_BASE}/rag/files`);
         const data = await res.json();
         renderFilesList(data.files || []);
     } catch { /* silent */ }
@@ -116,7 +141,7 @@ function renderFilesList(files) {
 
 async function deleteFile(filename) {
     try {
-        const res = await fetch(`${API_BASE}/rag/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+        const res = await apiFetch(`${API_BASE}/rag/files/${encodeURIComponent(filename)}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Delete failed');
         showToast(`Removed ${filename}`, 'info');
         loadFiles();
@@ -128,7 +153,7 @@ async function deleteFile(filename) {
 // ── Sessions ─────────────────────────────────────────────────────────────────
 async function loadSessions() {
     try {
-        const res = await fetch(`${API_BASE}/rag/sessions`);
+        const res = await apiFetch(`${API_BASE}/rag/sessions`);
         const data = await res.json();
         sessions = data.sessions || [];
         activeSessionId = data.active_session_id;
@@ -233,7 +258,7 @@ async function switchSession(id) {
     if (id === activeSessionId) return;
     activeSessionId = id;
     // Mark active on server
-    await fetch(`${API_BASE}/rag/sessions/active/${id}`, { method: 'PUT' }).catch(() => { });
+    await apiFetch(`${API_BASE}/rag/sessions/active/${id}`, { method: 'PUT' }).catch(() => { });
     // Update UI
     renderSessionsList();
     const s = getSession(id);
@@ -242,7 +267,7 @@ async function switchSession(id) {
 
 async function deleteSession(id) {
     try {
-        await fetch(`${API_BASE}/rag/sessions/${id}`, { method: 'DELETE' });
+        await apiFetch(`${API_BASE}/rag/sessions/${id}`, { method: 'DELETE' });
         sessions = sessions.filter(s => s.id !== id);
         if (activeSessionId === id) {
             activeSessionId = sessions[0]?.id || null;
@@ -268,7 +293,7 @@ async function persistMessages() {
     const session = getSession(activeSessionId);
     if (!session) return;
     try {
-        await fetch(`${API_BASE}/rag/sessions/${activeSessionId}/messages`, {
+        await apiFetch(`${API_BASE}/rag/sessions/${activeSessionId}/messages`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: session.messages })
@@ -400,7 +425,7 @@ async function streamAnswer(question) {
     let cursor = null;
 
     try {
-        const res = await fetch(`${API_BASE}/rag/stream`, {
+        const res = await apiFetch(`${API_BASE}/rag/stream`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -543,7 +568,7 @@ async function handleSubmit() {
     // If no active session, create one
     if (!activeSessionId) {
         try {
-            const res = await fetch(`${API_BASE}/rag/sessions`, {
+            const res = await apiFetch(`${API_BASE}/rag/sessions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: question.slice(0, 40) })
@@ -576,7 +601,7 @@ async function uploadPendingFiles() {
     const fd = new FormData();
     pendingFiles.forEach(f => fd.append('files', f));
     try {
-        const res = await fetch(`${API_BASE}/rag/upload`, { method: 'POST', body: fd });
+        const res = await apiFetch(`${API_BASE}/rag/upload`, { method: 'POST', body: fd });
         const data = await res.json();
         if (data.errors && data.errors.length) {
             showToast(`Some files failed: ${data.errors.join(', ')}`, 'error');
@@ -603,7 +628,7 @@ ingestBtn.addEventListener('click', async () => {
         }
 
         // 2. Trigger ingest
-        const res = await fetch(`${API_BASE}/rag/ingest`, { method: 'POST' });
+        const res = await apiFetch(`${API_BASE}/rag/ingest`, { method: 'POST' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Ingest failed');
 
@@ -638,7 +663,7 @@ newChatBtn.addEventListener('click', async () => {
         return;
     }
     try {
-        const res = await fetch(`${API_BASE}/rag/sessions`, {
+        const res = await apiFetch(`${API_BASE}/rag/sessions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({})
@@ -673,7 +698,7 @@ sessionTitle.addEventListener('dblclick', () => {
         const sess = getSession(activeSessionId);
         if (sess) sess.name = newName;
         renderSessionsList();
-        await fetch(`${API_BASE}/rag/sessions/${activeSessionId}`, {
+        await apiFetch(`${API_BASE}/rag/sessions/${activeSessionId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: newName })

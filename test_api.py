@@ -1,12 +1,17 @@
 import requests
 import json
 import time
+import os
 
 BASE_URL = "http://localhost:8000"
+API_KEY = os.getenv("RAG_API_KEY", "")
+
+def auth_headers():
+    return {"Authorization": f"Bearer {API_KEY}"} if API_KEY else {}
 
 def test_ingest():
     print("Testing /rag/ingest...")
-    response = requests.post(f"{BASE_URL}/rag/ingest")
+    response = requests.post(f"{BASE_URL}/rag/ingest", headers=auth_headers())
     print(f"Status: {response.status_code}")
     print(f"Response: {json.dumps(response.json(), indent=2)}")
     return response.status_code == 200
@@ -18,7 +23,7 @@ def test_answer(question, history=[]):
         "history": history
     }
     start = time.time()
-    response = requests.post(f"{BASE_URL}/rag/answer", json=payload)
+    response = requests.post(f"{BASE_URL}/rag/answer", json=payload, headers=auth_headers())
     end = time.time()
     
     print(f"Status: {response.status_code}")

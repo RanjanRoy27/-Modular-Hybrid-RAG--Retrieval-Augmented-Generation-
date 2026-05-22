@@ -22,16 +22,16 @@ def validate_env():
     return True
 
 def get_embeddings():
-    return GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+    return GoogleGenerativeAIEmbeddings(model=os.getenv("EMBED_MODEL", "models/gemini-embedding-001"))
 
 def get_llm():
-    return ChatGoogleGenerativeAI(model="gemini-flash-latest", temperature=0)
+    return ChatGoogleGenerativeAI(model=os.getenv("LLM_MODEL", "gemini-2.0-flash"), temperature=0)
 
 q_client = None
 def get_qdrant_client():
     global q_client
     if q_client is None:
-        q_client = QdrantClient(path="qdrant_store")
+        q_client = QdrantClient(path=os.getenv("QDRANT_PATH", "qdrant_store"))
     return q_client
 
 def load_retriever(embeddings):

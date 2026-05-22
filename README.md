@@ -43,10 +43,25 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configuration
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory. The easiest path is to copy `.env.example`:
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
 ```env
 GOOGLE_API_KEY=your_api_key_here
+
+# Optional locally, recommended for deployment.
+RAG_API_KEY=your_private_app_api_key
 ```
+
+When `RAG_API_KEY` is set, API clients must send:
+```http
+Authorization: Bearer your_private_app_api_key
+```
+
+The browser UI will prompt for the key on the first protected request and store it in local browser storage.
 
 ### 4. Usage
 
@@ -61,6 +76,12 @@ python ingest.py
 python api.py
 ```
 The API will be available at `http://localhost:8000`. You can view the Interactive Documentation at `http://localhost:8000/docs`.
+
+To test protected endpoints from a terminal:
+```bash
+$env:RAG_API_KEY="your_private_app_api_key"
+python test_api.py
+```
 
 ---
 

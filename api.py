@@ -48,11 +48,13 @@ if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    expected_key = os.getenv("RAG_API_KEY", "default-dev-key")
-    if credentials.credentials != expected_key:
+def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    expected_key = os.getenv("RAG_API_KEY")
+    if not expected_key:
+        return credentials
+    if not credentials or credentials.credentials != expected_key:
         raise HTTPException(status_code=401, detail="Invalid API Key")
     return credentials
 
@@ -60,16 +62,31 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 class RAGState:
     def __init__(self):
         self.agent_executor = None
+        self.retriever = None
+        self.rephrase_chain = None
+        self.qa_chain = None
+        self.reranker = None
         self.initialized = False
 
     def initialize(self):
         if not core.validate_env():
             logger.error("API start failed: GOOGLE_API_KEY missing.")
             return
-        logger.info("Initializing Agent components...")
+        logger.info("Initializing RAG components...")
+        embeddings = core.get_embeddings()
+        llm = core.get_llm()
+        retriever, msg = core.load_retriever(embeddings)
+        if not retriever:
+            logger.error(msg)
+            self.initialized = False
+            return
+        self.retriever = retriever
+        self.rephrase_chain = core.rephrase_prompt_template() | llm
+        self.qa_chain = core.qa_prompt_template() | llm
+        self.reranker = CrossEncoderReranker()
         self.agent_executor = agent.build_agent()
         self.initialized = True
-        logger.info("Agent components ready.")
+        logger.info("RAG components ready.")
 
 state = RAGState()
 
