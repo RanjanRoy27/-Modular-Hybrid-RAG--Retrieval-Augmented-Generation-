@@ -10,6 +10,10 @@ This project follows Semantic Versioning:
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.1.1] - 2026-05-22
+
 ### Added
 
 - Professional repository layout with `docs/`, `scripts/`, and `tests/`.
@@ -32,4 +36,3 @@ This project follows Semantic Versioning:
 - Qdrant vector-store ingestion and retrieval.
 - Optional API key authentication through `RAG_API_KEY`.
 - Docker and Docker Compose deployment files.
-
