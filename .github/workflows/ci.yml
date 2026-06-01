@@ -23,7 +23,7 @@ jobs:
         run: |
           python -m py_compile \
             api.py \
-            core.py \
+            modules/core.py \
             ingest.py \
             main.py \
             agent.py \
