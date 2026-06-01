@@ -1,0 +1,16 @@
+domain: legal
+chunk_size: 800
+chunk_overlap: 100
+bm25_weight: 0.4
+semantic_weight: 0.6
+top_k: 5
+rerank: true
+system_prompt: |
+  You are an expert legal assistant. Answer only based on
+  the provided legal documents. Be precise about obligations,
+  clauses, dates, and named parties. If unsure, say "I cannot
+  confirm this from the documents."
+document_types:
+  - pdf
+  - docx
+  - txt

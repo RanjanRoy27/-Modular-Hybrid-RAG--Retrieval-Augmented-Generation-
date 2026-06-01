@@ -5,6 +5,7 @@ A FastAPI-based Retrieval-Augmented Generation system for chatting with private 
 ## Features
 
 - Document ingestion for PDF, DOCX, TXT, and spreadsheet sources.
+- Domain-isolated RAG layers for accounting, legal, and bookkeeping workflows.
 - Qdrant-backed semantic retrieval with optional BM25 keyword retrieval modules.
 - Cross-encoder reranking before answer generation.
 - FastAPI API with an included static chat UI.
@@ -25,22 +26,39 @@ A FastAPI-based Retrieval-Augmented Generation system for chatting with private 
 
 ```text
 .
-├── api.py                  # FastAPI app and HTTP routes
-├── agent.py                # Tool-calling RAG agent
-├── core.py                 # Runtime model/vector-store helpers
-├── ingest.py               # Current ingestion entry point
-├── main.py                 # CLI chat entry point
-├── modules/                # Modular V3 components by responsibility
-├── static/                 # Browser UI
-├── eval/                   # Evaluation scripts and datasets
-├── tests/                  # Manual/API smoke tests
-├── scripts/                # Utility scripts
-├── docs/                   # Project, deployment, and workflow docs
+├── rag-platform/
+│   ├── core/                  # Shared embedding, retrieval, chunking, reranking, and LLM helpers
+│   ├── domains/               # Accounting, legal, and bookkeeping domain modules
+│   ├── api/                   # FastAPI app and Pydantic schemas
+│   ├── agent/                 # Tool-calling RAG agent
+│   ├── ingest/                # Document ingestion entry points
+│   └── tests/                 # Package-level structural tests
+├── modules/                   # Existing modular V3 components by responsibility
+├── static/                    # Browser UI
+├── eval/                      # Evaluation scripts and datasets
+├── tests/                     # Existing manual/API smoke tests
+├── scripts/                   # Utility scripts
+├── docs/                      # Project, deployment, and workflow docs
+├── api.py                     # Backward-compatible API entry point
+├── ingest.py                  # Backward-compatible ingestion entry point
+├── main.py                    # CLI chat entry point
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
 └── .env.example
 ```
+
+## Domain Routing
+
+The answer endpoint accepts a runtime `domain` query parameter:
+
+```bash
+POST /rag/answer?domain=accounting
+POST /rag/answer?domain=legal
+POST /rag/answer?domain=bookkeeping
+```
+
+Each domain owns its own `config.yaml` and `preprocessor.py`. Adding a domain requires a new folder under `rag-platform/domains/` with those files; the shared `rag-platform/core/` package does not need domain-specific changes.
 
 ## Quick Start
 
@@ -88,6 +106,12 @@ python ingest.py
 python api.py
 ```
 
+You can also start the structured API module directly:
+
+```bash
+python rag-platform/api/main.py
+```
+
 Open `http://localhost:8000`.
 
 ## Docker
@@ -113,7 +137,7 @@ python tests/test_api.py
 Run a syntax-only check:
 
 ```bash
-python -m py_compile api.py core.py ingest.py main.py agent.py monitor.py reranker.py pipeline.py tests/test_api.py tests/test_llm.py
+python -m py_compile api.py ingest.py main.py monitor.py pipeline.py rag-platform/api/main.py rag-platform/core/*.py rag-platform/agent/agent.py rag-platform/ingest/ingest.py
 ```
 
 ## Project Workflow
@@ -131,4 +155,3 @@ See [docs/git_workflow.md](docs/git_workflow.md) for the exact commit, branch, a
 - [Git workflow](docs/git_workflow.md)
 - [Architecture notes](docs/architecture.md)
 - [Changelog](CHANGELOG.md)
-
