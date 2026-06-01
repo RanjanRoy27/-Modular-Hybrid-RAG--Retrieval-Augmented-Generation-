@@ -21,19 +21,15 @@ jobs:
 
       - name: Check Python syntax
         run: |
-          python -m py_compile \
+          python -m compileall -q \
             api.py \
-            modules/core.py \
             ingest.py \
             main.py \
-            agent.py \
             monitor.py \
-            reranker.py \
             pipeline.py \
-            tests/test_api.py \
-            tests/test_llm.py \
-            scripts/debug_models.py \
-            scripts/ingest_runner.py
+            rag-platform \
+            tests \
+            scripts
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -42,4 +38,3 @@ jobs:
 
       - name: Check frontend syntax
         run: node --check static/app.js
-
