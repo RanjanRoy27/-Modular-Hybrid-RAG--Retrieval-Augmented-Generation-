@@ -1,5 +1,7 @@
 # The Story of RAG V3: The Ultimate Librarian
 
+> **Status:** V3 design/narrative doc. This describes the intended `pipeline.py` + `modules/` architecture and is not yet the default live behavior of `/rag/answer`.
+
 Imagine you have a massive, sprawling library filled with thousands of intricate company documents—medical protocols, lease agreements, HR policies, you name it. Your employees are the patrons, and they need answers. Fast.
 
 In the old days (our V1 and V2 systems), we hired a pretty smart librarian. They would read the books, remember the general "vibe" (vector search), and give you an answer. But there were a few big problems:

@@ -1,3 +1,9 @@
+# Historical Progress Report - Superseded
+
+> **Status:** This report is preserved as a historical FAISS-era MVP note. It does not describe the current live system.
+>
+> For the current Qdrant-based runtime, see [../README.md](../README.md). For the live-runtime and V3 roadmap split, see [architecture.md](architecture.md).
+
 # RAG MVP Project Progress Report
 
 ## Executive Summary

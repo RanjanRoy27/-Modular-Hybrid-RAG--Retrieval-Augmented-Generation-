@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
+# STATUS: Canonical live API domain model. V3 modules/domain uses a separate experimental taxonomy.
 class BaseDomain(ABC):
     
     @abstractmethod

@@ -10,7 +10,16 @@ This project follows Semantic Versioning:
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### Added
+
+- Modular V3 pipeline components under `modules/` for query normalization, HyDE-style expansion, vector + BM25 retrieval, RRF hybrid merging, reranking, grounding checks, observability, and evaluation.
+- V3 query orchestrator in `pipeline.py`.
+
+### Changed
+
+- Documentation now distinguishes the live root-level FastAPI runtime from the in-progress V3 modular pipeline.
+- Architecture notes reframed as a public roadmap.
+- Historical FAISS-era progress report labeled as superseded.
 
 ## [0.1.1] - 2026-05-22
 

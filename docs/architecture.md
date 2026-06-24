@@ -1,57 +1,79 @@
-# Architecture
+# Architecture Roadmap
 
-This project currently has two layers of code:
+This project has a working `rag-platform/` runtime and a modular V3 query pipeline being developed alongside it. The immediate goal is to keep the live app stable while moving proven V3 behavior into the platform deliberately.
 
-- Root-level runtime files that power the active MVP.
-- `modules/` components that represent the cleaner V3 modular direction.
+## Current Live Runtime
 
-The long-term goal is to move behavior from root-level files into the module folders without breaking the working API.
+The active FastAPI app is powered by `rag-platform/`:
 
-## Runtime Entry Points
+- `rag-platform/api/main.py`: FastAPI app, static UI serving, auth, sessions, file management, ingestion routes, answer routes, streaming, and domain selection.
+- `rag-platform/api/schemas.py`: request and response models.
+- `rag-platform/ingest/`: document loading, domain preprocessing, semantic chunking, embeddings, and Qdrant writes.
+- `rag-platform/agent/`: tool-calling RAG agent with semantic search and document locator tools.
+- `rag-platform/core/`: shared model clients, Qdrant retriever, chunker, reranker, and prompt helpers.
+- `rag-platform/domains/`: canonical live domain model for `accounting`, `legal`, and `bookkeeping`.
 
-- `api.py`: FastAPI app, static UI serving, auth, sessions, ingestion routes, answer routes, and streaming.
-- `ingest.py`: document loading, chunking, embedding, and Qdrant writes.
-- `main.py`: CLI chat loop.
-- `agent.py`: tool-calling agent and search/document tools.
-- `core.py`: environment validation, model clients, Qdrant client, retriever, and prompt templates.
+Root-level `api.py`, `ingest.py`, and `main.py` remain as backward-compatible entry points. In this runtime, `/rag/answer` uses the `rag-platform/` agent path, and `/rag/stream` uses the platform retriever, reranker, and prompt chains directly.
 
-## Module Responsibilities
+## V3 Modular Direction
+
+`pipeline.py` and `modules/` represent the intended V3 query architecture. This path is in progress and should not be described as the default live API behavior until it is wired into `rag-platform/api/main.py`.
+
+Module responsibilities:
 
 - `modules/config.py`: central configuration values.
-- `modules/ingestion/`: loaders, cleaning, chunking, embedding, ingestion pipeline.
-- `modules/retrieval/`: vector, BM25, and hybrid retrieval.
+- `modules/ingestion/`: loaders, cleaning, chunking, embedding, and ingestion orchestration.
+- `modules/retrieval/`: vector search, BM25 keyword search, and hybrid RRF merging.
 - `modules/ranking/`: reranking logic.
-- `modules/generation/`: prompt building, context assembly, LLM calls.
-- `modules/query/`: query normalization and expansion.
-- `modules/output/`: answer formatting.
+- `modules/generation/`: context building, prompt building, and LLM calls.
+- `modules/query/`: query normalization and HyDE-style expansion.
+- `modules/output/`: answer formatting and grounding checks.
 - `modules/evaluation/`: evaluation helpers and datasets.
-- `modules/observability/`: logging/tracing.
-- `modules/domain/`: domain detection.
+- `modules/observability/`: structured query logging/tracing.
+- `modules/domain/`: experimental V3 domain detection for `real_estate`, `healthcare`, and `generic`.
 
-## Data Flow
+## Live Data Flow
 
 ```text
 Documents
-  -> ingestion loader
-  -> cleaner/chunker
+  -> rag-platform/ingest loaders
+  -> live domain preprocessor
+  -> semantic chunking
   -> embeddings
   -> Qdrant
-  -> retriever
-  -> reranker
-  -> context builder
+  -> platform retriever
+  -> cross-encoder reranker
+  -> platform agent or streaming QA chain
   -> Gemini
-  -> formatted answer with citations
+  -> answer with citations/source metadata
 ```
 
-## Refactor Direction
+## Target V3 Data Flow
 
-Future work should reduce logic in `api.py`, `core.py`, and `ingest.py` by moving stable behavior into `modules/`.
+```text
+Question
+  -> normalize
+  -> detect domain
+  -> optionally expand with HyDE
+  -> vector search + BM25 search
+  -> RRF hybrid merge
+  -> rerank
+  -> build context
+  -> build prompt
+  -> Gemini
+  -> format response
+  -> grounding check and optional guard
+  -> structured trace log
+```
 
-Recommended order:
+## Roadmap
 
-1. Move configuration usage to `modules/config.py`.
-2. Replace root ingestion logic with `modules/ingestion/pipeline.py`.
-3. Replace root retrieval logic with `modules/retrieval/hybrid.py`.
-4. Move answer formatting and citation shaping to `modules/output/formatter.py`.
-5. Keep `api.py` as a thin HTTP layer.
+Recommended integration order:
 
+1. Align shared configuration between `rag-platform/` and `modules/config.py`.
+2. Reconcile the live domain registry (`accounting`, `legal`, `bookkeeping`) with the experimental V3 detector taxonomy before exposing V3 through the API.
+3. Replace or wrap platform ingestion with `modules/ingestion/pipeline.py` once output metadata and Qdrant writes match the live path.
+4. Wire V3 retrieval behind a controlled API path or feature flag before replacing `/rag/answer`.
+5. Move answer formatting, citation shaping, and grounding warnings into the platform response path.
+6. Add tests around V3 pipeline behavior before making it the default runtime.
+7. Keep `rag-platform/api/main.py` as the HTTP/session/static-file layer after core behavior is modularized.

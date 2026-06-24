@@ -1,5 +1,6 @@
 """
 detector.py — Domain Detection Module
+STATUS: Experimental V3 domain model used by pipeline.py/modules, not the live root API path.
 Responsibility: Classify user query into a domain for domain-aware prompt selection.
 Uses keyword heuristics first (fast, zero token cost), LLM fallback only if ambiguous.
 Output: 'real_estate' | 'healthcare' | 'generic'
